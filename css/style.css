@@ -167,6 +167,11 @@ footer a { color: var(--muted); }
 header { position: relative; width: 100%; max-width: 1000px; }
 .mute { position: absolute; top: 1.5rem; right: 1rem; font-size: 0.85rem; padding: 0.3rem 0.7rem; }
 
+@media (max-width: 600px) {
+  .mute { position: static; margin-top: 0.6rem; }
+  h1 { font-size: 1.9rem; letter-spacing: 0.15em; }
+}
+
 .board-wrap { position: relative; }
 
 .fx { position: absolute; inset: 0; pointer-events: none; border-radius: 3px; }
