@@ -2,7 +2,12 @@
   'use strict';
 
   const { SIZE, SHIPS, Board, AIPlayer, coordLabel } = window.BattleshipLogic;
-  const AI_DELAY_MS = 700;
+  const fx = window.BattleshipEffects;
+  const sound = window.BattleshipSound;
+  const AI_THINK_MS = 450;
+  const AI_AIM_MS = 550;
+  const RESULT_SOUND_DELAY_MS = 140;
+  const GAME_OVER_DELAY_MS = 1300;
   const RECORD_KEY = 'battleship-record-v1';
   const DIFFICULTIES = ['easy', 'normal', 'hard'];
 
@@ -11,6 +16,9 @@
     playerBoard: $('player-board'),
     enemyBoard: $('enemy-board'),
     enemyWrap: $('enemy-wrap'),
+    playerWrap: $('player-wrap'),
+    legend: $('legend'),
+    muteBtn: $('mute-btn'),
     playerFleet: $('player-fleet'),
     enemyFleet: $('enemy-fleet'),
     status: $('status'),
@@ -95,6 +103,26 @@
 
   function setStatus(text) {
     el.status.textContent = text;
+    fx.pulse(el.status);
+  }
+
+  function playShotSounds(result) {
+    sound.play('fire');
+    setTimeout(() => sound.play(result === 'miss' ? 'miss' : result), RESULT_SOUND_DELAY_MS);
+  }
+
+  function showShotEffects(cells, wrap, r, c, outcome, bannerText, tone) {
+    fx.shot(cells[r][c], outcome.result);
+    if (outcome.result === 'sunk') {
+      fx.sunk(outcome.ship.cells.map(([sr, sc]) => cells[sr][sc]));
+      fx.banner(wrap, bannerText, tone);
+    }
+  }
+
+  function renderMute() {
+    const muted = sound.isMuted();
+    el.muteBtn.textContent = muted ? 'Sound: Off' : 'Sound: On';
+    el.muteBtn.setAttribute('aria-pressed', String(muted));
   }
 
   function selectedSpec() {
@@ -175,6 +203,7 @@
     state.phase = 'battle';
     state.gameId += 1;
     state.turn = Math.random() < 0.5 ? 'player' : 'ai';
+    sound.unlock();
     el.badge.textContent = `AI: ${capitalize(state.difficulty)}`;
     if (state.turn === 'player') {
       setStatus('Coin flip: you go first! Fire at Enemy Waters.');
@@ -201,14 +230,21 @@
         ? `You fired at ${where}: hit! You sank the enemy's ${outcome.ship.name}!`
         : `You fired at ${where}: hit! ${outcome.ship.name}.`;
     }
+    playShotSounds(outcome.result);
     if (state.enemy.allSunk()) {
       render();
+      showShotEffects(enemyCells, el.enemyWrap, r, c, outcome, `SUNK! Enemy ${outcome.ship.name}`, 'good');
       endGame(true);
       return;
     }
     state.turn = 'ai';
     setStatus(`${msg} Enemy is aiming...`);
     render();
+    if (outcome.result !== 'miss') {
+      showShotEffects(enemyCells, el.enemyWrap, r, c, outcome, `SUNK! Enemy ${outcome.ship.name}`, 'good');
+    } else {
+      fx.shot(enemyCells[r][c], 'miss');
+    }
     scheduleAi();
   }
 
@@ -216,12 +252,16 @@
     const id = state.gameId;
     clearTimeout(state.timer);
     state.timer = setTimeout(() => {
-      if (id === state.gameId && state.phase === 'battle') aiTurn();
-    }, AI_DELAY_MS);
+      if (id !== state.gameId || state.phase !== 'battle') return;
+      const [r, c] = state.ai.chooseShot();
+      fx.aim(playerCells[r][c], AI_AIM_MS);
+      state.timer = setTimeout(() => {
+        if (id === state.gameId && state.phase === 'battle') aiTurn(r, c);
+      }, AI_AIM_MS);
+    }, AI_THINK_MS);
   }
 
-  function aiTurn() {
-    const [r, c] = state.ai.chooseShot();
+  function aiTurn(r, c) {
     const outcome = state.player.receiveShot(r, c);
     state.ai.recordResult(r, c, outcome);
     state.lastAiShot = [r, c];
@@ -230,19 +270,24 @@
     if (outcome.result === 'miss') msg = `Enemy fired at ${where}: miss.`;
     else if (outcome.result === 'sunk') msg = `Enemy fired at ${where}: they sank your ${outcome.ship.name}!`;
     else msg = `Enemy fired at ${where}: hit on your ${outcome.ship.name}!`;
+    playShotSounds(outcome.result);
+    const bannerText = outcome.ship ? `Your ${outcome.ship.name} was sunk!` : '';
     if (state.player.allSunk()) {
       render();
+      showShotEffects(playerCells, el.playerWrap, r, c, outcome, bannerText, 'bad');
       endGame(false);
       return;
     }
     state.turn = 'player';
     setStatus(`${msg} Your turn.`);
     render();
+    showShotEffects(playerCells, el.playerWrap, r, c, outcome, bannerText, 'bad');
   }
 
   function endGame(playerWon) {
     clearTimeout(state.timer);
     state.gameId += 1;
+    const id = state.gameId;
     state.phase = 'over';
     state.turn = null;
     recordResult(state.difficulty, playerWon);
@@ -253,8 +298,12 @@
       : `The AI sank your fleet. You fired ${state.stats.shots} shots (${accuracy}% accuracy). Enemy ships are now revealed.`;
     setStatus(playerWon ? 'Victory! The enemy fleet is destroyed.' : 'Defeat. Your fleet has been sunk.');
     render();
-    el.overlay.hidden = false;
-    el.playAgainBtn.focus();
+    state.timer = setTimeout(() => {
+      if (id !== state.gameId) return;
+      el.overlay.hidden = false;
+      el.playAgainBtn.focus();
+      if (playerWon) { fx.confetti(); sound.play('victory'); } else { fx.defeat(); sound.play('defeat'); }
+    }, GAME_OVER_DELAY_MS);
   }
 
   function newGame() {
@@ -357,6 +406,7 @@
     }
 
     el.enemyWrap.hidden = setup;
+    el.legend.hidden = setup;
     el.enemyBoard.classList.toggle('active', state.phase === 'battle' && state.turn === 'player');
     if (state.enemy) {
       for (let r = 0; r < SIZE; r++) {
@@ -428,6 +478,11 @@
 
   // ---------- Wiring ----------
 
+  el.muteBtn.addEventListener('click', () => {
+    sound.setMuted(!sound.isMuted());
+    sound.unlock();
+    renderMute();
+  });
   el.rotateBtn.addEventListener('click', rotate);
   el.randomBtn.addEventListener('click', randomize);
   el.clearBtn.addEventListener('click', clearBoard);
@@ -442,5 +497,6 @@
 
   setupStatus();
   renderRecord();
+  renderMute();
   render();
 })();

@@ -13,6 +13,7 @@
   <header>
     <h1>Battleship</h1>
     <p class="tagline">Sink the enemy fleet before the AI sinks yours.</p>
+    <button type="button" id="mute-btn" class="mute" aria-pressed="false">Sound: On</button>
   </header>
 
   <main>
@@ -38,7 +39,7 @@
     <p id="status" class="status" role="status" aria-live="polite"></p>
 
     <section class="boards">
-      <div class="board-wrap">
+      <div class="board-wrap" id="player-wrap">
         <h2>Your Fleet</h2>
         <div id="player-board" class="board" role="grid" aria-label="Your fleet"></div>
         <ul id="player-fleet" class="fleet" aria-label="Your ships"></ul>
@@ -49,6 +50,14 @@
         <ul id="enemy-fleet" class="fleet" aria-label="Enemy ships"></ul>
       </div>
     </section>
+
+    <ul id="legend" class="legend" aria-label="Legend" hidden>
+      <li><span class="cell swatch ship"></span>Your ship</li>
+      <li><span class="cell swatch hit"></span>Hit (ship still afloat)</li>
+      <li><span class="cell swatch sunk"></span>Sunk ship</li>
+      <li><span class="cell swatch miss"></span>Miss</li>
+      <li><span class="cell swatch last-shot"></span>Last shot</li>
+    </ul>
 
     <section class="panel stats">
       <h2>Record</h2>
@@ -70,6 +79,8 @@
   </footer>
 
   <script src="js/game-logic.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/effects.js"></script>
   <script src="js/ui.js"></script>
 </body>
 </html>
