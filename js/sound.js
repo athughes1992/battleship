@@ -6,6 +6,9 @@
   let ctx = null;
   let muted = false;
   try { muted = window.localStorage.getItem(MUTE_KEY) === '1'; } catch (e) { muted = false; }
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+  } catch (e) {}
 
   function context() {
     if (!ctx) {
@@ -13,7 +16,7 @@
       if (!AC) return null;
       ctx = new AC();
     }
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended' || ctx.state === 'interrupted') ctx.resume();
     return ctx;
   }
 
@@ -107,7 +110,17 @@
 
   function unlock() {
     if (muted) return;
-    try { context(); } catch (e) { /* ignore */ }
+    try {
+      const ac = context();
+      if (ac && ac.state !== 'running') {
+        const buffer = ac.createBuffer(1, 1, 22050);
+        const source = ac.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ac.destination);
+        source.start(0);
+        ac.resume();
+      }
+    } catch (e) {}
   }
 
   root.BattleshipSound = { play, setMuted, unlock, isMuted: () => muted };

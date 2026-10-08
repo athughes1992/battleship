@@ -488,6 +488,8 @@
     sound.unlock();
     renderMute();
   });
+  document.addEventListener('pointerdown', () => sound.unlock(), { passive: true });
+  document.addEventListener('touchend', () => sound.unlock(), { passive: true });
   el.rotateBtn.addEventListener('click', rotate);
   el.randomBtn.addEventListener('click', randomize);
   el.clearBtn.addEventListener('click', clearBoard);
