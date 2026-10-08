@@ -16,7 +16,7 @@
       if (!AC) return null;
       ctx = new AC();
     }
-    if (ctx.state === 'suspended' || ctx.state === 'interrupted') ctx.resume();
+    if (ctx.state === 'suspended' || ctx.state === 'interrupted') ctx.resume().catch(() => {});
     return ctx;
   }
 
@@ -118,7 +118,7 @@
         source.buffer = buffer;
         source.connect(ac.destination);
         source.start(0);
-        ac.resume();
+        ac.resume().catch(() => {});
       }
     } catch (e) {}
   }
