@@ -55,6 +55,7 @@ button, select {
   border-radius: 6px;
   padding: 0.45rem 0.9rem;
   cursor: pointer;
+  touch-action: manipulation;
 }
 button:not(.cell):hover:not(:disabled), select:hover { background: #29608f; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }

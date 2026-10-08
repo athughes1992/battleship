@@ -75,14 +75,19 @@
         btn.type = 'button';
         btn.className = 'cell';
         btn.addEventListener('click', () => onClick(r, c));
-        btn.addEventListener('mouseenter', () => setHover(container, r, c));
+        // iOS Safari cancels the tap if hover changes the DOM, so only mice preview.
+        btn.addEventListener('pointerenter', (e) => {
+          if (e.pointerType === 'mouse') setHover(container, r, c);
+        });
         btn.addEventListener('focus', () => setHover(container, r, c));
         container.appendChild(btn);
         row.push(btn);
       }
       cells.push(row);
     }
-    container.addEventListener('mouseleave', () => setHover(container, null));
+    container.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse') setHover(container, null);
+    });
     return cells;
   }
 
