@@ -370,7 +370,10 @@
     const [r, c] = state.hover;
     const cells = [];
     for (let i = 0; i < spec.length; i++) cells.push(state.horizontal ? [r, c + i] : [r + i, c]);
-    return { cells, valid: state.player.canPlace(spec.length, r, c, state.horizontal) };
+    return {
+      cells: cells.filter(([row, col]) => row >= 0 && row < SIZE && col >= 0 && col < SIZE),
+      valid: state.player.canPlace(spec.length, r, c, state.horizontal),
+    };
   }
 
   function isSame(a, r, c) {
