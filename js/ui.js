@@ -36,7 +36,6 @@
     overTitle: $('game-over-title'),
     overDetail: $('game-over-detail'),
     playAgainBtn: $('play-again-btn'),
-    reviewBtn: $('review-btn'),
   };
 
   const state = {
@@ -487,7 +486,6 @@
   el.startBtn.addEventListener('click', startBattle);
   el.restartBtn.addEventListener('click', newGame);
   el.playAgainBtn.addEventListener('click', newGame);
-  el.reviewBtn.addEventListener('click', () => { el.overlay.hidden = true; el.restartBtn.focus(); });
   document.addEventListener('keydown', (e) => {
     if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey && !e.altKey) rotate();
     if (e.key === 'Escape' && !el.overlay.hidden) { el.overlay.hidden = true; }
