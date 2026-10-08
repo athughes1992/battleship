@@ -56,7 +56,7 @@ button, select {
   padding: 0.45rem 0.9rem;
   cursor: pointer;
 }
-button:hover:not(:disabled), select:hover { background: #29608f; }
+button:not(.cell):hover:not(:disabled), select:hover { background: #29608f; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button.primary { background: var(--accent); color: #1b1b1b; border-color: var(--accent); font-weight: 700; }
 button.primary:hover:not(:disabled) { background: #ffcb61; }
@@ -94,7 +94,6 @@ button.primary:hover:not(:disabled) { background: #ffcb61; }
   position: relative;
   cursor: default;
 }
-.cell:hover:not(:disabled) { background: var(--water); }
 .board.enemy.active .cell:not(.miss):not(.hit):not(.sunk) { cursor: crosshair; }
 .board.enemy.active .cell:not(.miss):not(.hit):not(.sunk):hover { background: var(--water-hover); }
 .board.placing .cell { cursor: pointer; }
