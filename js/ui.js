@@ -49,7 +49,6 @@
     hover: null,
     drag: null,
     suppressClick: false,
-    pendingClick: null,
     turn: null, // 'player' | 'ai'
     lastPlayerShot: null,
     lastAiShot: null,
@@ -95,7 +94,6 @@
             pointerId: e.pointerId,
             anchor: null,
           };
-          container.setPointerCapture(e.pointerId);
         });
         // iOS Safari cancels the tap if hover changes the DOM, so only mice preview.
         btn.addEventListener('pointerenter', (e) => {
@@ -125,6 +123,9 @@
       if (!drag.moved && row === drag.startCell[0] && col === drag.startCell[1]) return;
       if (!drag.moved) {
         drag.moved = true;
+        try {
+          container.setPointerCapture(drag.pointerId);
+        } catch (e) {}
         state.player.remove(drag.id);
         state.selectedId = drag.id;
         state.horizontal = drag.horizontal;
@@ -139,16 +140,7 @@
       const drag = state.drag;
       if (container !== el.playerBoard || !drag || e.pointerId !== drag.pointerId) return;
       state.drag = null;
-      if (!drag.moved) {
-        if (!cancelled) {
-          const pendingClick = { startCell: drag.startCell };
-          state.pendingClick = pendingClick;
-          setTimeout(() => {
-            if (state.pendingClick === pendingClick) state.pendingClick = null;
-          }, 500);
-        }
-        return;
-      }
+      if (!drag.moved) return;
       const spec = SHIPS.find((ship) => ship.id === drag.id);
       const placed = !cancelled && drag.anchor && spec
         && state.player.place(spec, drag.anchor[0], drag.anchor[1], drag.horizontal);
@@ -568,22 +560,8 @@
   document.addEventListener('pointerdown', () => sound.unlock(), { passive: true });
   document.addEventListener('touchend', () => sound.unlock(), { passive: true });
   document.addEventListener('click', (e) => {
-    if (state.suppressClick) {
-      state.suppressClick = false;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      return;
-    }
-    const pendingClick = state.pendingClick;
-    if (!pendingClick) return;
-    state.pendingClick = null;
-    const target = document.elementFromPoint(e.clientX, e.clientY);
-    const cell = target && target.closest('.cell');
-    if (!cell || !el.playerBoard.contains(cell)
-        || Number(cell.dataset.r) !== pendingClick.startCell[0]
-        || Number(cell.dataset.c) !== pendingClick.startCell[1]
-        || cell.contains(e.target)) return;
-    onPlayerCell(pendingClick.startCell[0], pendingClick.startCell[1]);
+    if (!state.suppressClick) return;
+    state.suppressClick = false;
     e.preventDefault();
     e.stopImmediatePropagation();
   }, true);
