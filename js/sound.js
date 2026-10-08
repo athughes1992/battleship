@@ -65,7 +65,13 @@
       noise(ac, { duration: 0.2, gain: 0.25, type: 'lowpass', from: 2000, to: 200 });
     },
     miss(ac) {
-      noise(ac, { duration: 0.5, gain: 0.3, type: 'bandpass', from: 1400, to: 300, q: 0.8 });
+      // Cannonball into water: deep plunk, rising bubble "bloop", splash, then droplets.
+      tone(ac, { duration: 0.18, gain: 0.45, from: 170, to: 55 });
+      tone(ac, { duration: 0.09, gain: 0.25, from: 280, to: 950, delay: 0.02 });
+      noise(ac, { duration: 0.55, gain: 0.32, type: 'bandpass', from: 2600, to: 700, q: 0.6, delay: 0.03 });
+      [0.22, 0.31, 0.38, 0.47].forEach((delay, i) => {
+        tone(ac, { duration: 0.05, gain: 0.07, from: 900 + i * 250, to: 1800 + i * 300, delay });
+      });
     },
     hit(ac) {
       noise(ac, { duration: 0.7, gain: 0.6, type: 'lowpass', from: 1800, to: 80 });
