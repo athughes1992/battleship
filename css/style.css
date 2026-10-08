@@ -99,6 +99,7 @@ button.primary:hover:not(:disabled) { background: #ffcb61; }
 .board.enemy.active .cell:not(.miss):not(.hit):not(.sunk) { cursor: crosshair; }
 .board.enemy.active .cell:not(.miss):not(.hit):not(.sunk):hover { background: var(--water-hover); }
 .board.placing .cell { cursor: pointer; }
+.board.placing .cell.ship { touch-action: none; cursor: grab; }
 
 .cell.ship { background: var(--ship); }
 .cell.preview { background: #4fb37a; }
