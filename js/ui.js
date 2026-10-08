@@ -310,14 +310,12 @@
     if (state.phase === 'battle' && !window.confirm('Abandon the current battle and start over?')) return;
     clearTimeout(state.timer);
     state.gameId += 1;
-    const previous = state.player.ships.map((s) => ({ spec: SHIPS.find((x) => x.id === s.id), cell: s.cells[0], horizontal: s.horizontal }));
     state.player = new Board();
-    previous.forEach(({ spec, cell, horizontal }) => state.player.place(spec, cell[0], cell[1], horizontal));
     state.enemy = null;
     state.ai = null;
     state.phase = 'setup';
     state.turn = null;
-    state.selectedId = nextUnplaced();
+    state.selectedId = SHIPS[0].id;
     el.overlay.hidden = true;
     setupStatus();
     render();
