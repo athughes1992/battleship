@@ -47,6 +47,8 @@
     horizontal: true,
     selectedId: SHIPS[0].id,
     hover: null,
+    drag: null,
+    suppressClick: false,
     turn: null, // 'player' | 'ai'
     lastPlayerShot: null,
     lastAiShot: null,
@@ -74,15 +76,87 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'cell';
+        btn.dataset.r = r;
+        btn.dataset.c = c;
         btn.addEventListener('click', () => onClick(r, c));
-        btn.addEventListener('mouseenter', () => setHover(container, r, c));
+        btn.addEventListener('pointerdown', (e) => {
+          if (container !== el.playerBoard || state.phase !== 'setup' || state.drag) return;
+          const ship = state.player.shipAt(r, c);
+          if (!ship) return;
+          const offset = ship.cells.findIndex(([shipR, shipC]) => shipR === r && shipC === c);
+          state.drag = {
+            id: ship.id,
+            horizontal: ship.horizontal,
+            offset,
+            origin: ship.cells[0],
+            startCell: [r, c],
+            moved: false,
+            pointerId: e.pointerId,
+            anchor: null,
+          };
+        });
+        // iOS Safari cancels the tap if hover changes the DOM, so only mice preview.
+        btn.addEventListener('pointerenter', (e) => {
+          if (e.pointerType === 'mouse') setHover(container, r, c);
+        });
         btn.addEventListener('focus', () => setHover(container, r, c));
         container.appendChild(btn);
         row.push(btn);
       }
       cells.push(row);
     }
-    container.addEventListener('mouseleave', () => setHover(container, null));
+    container.addEventListener('pointermove', (e) => {
+      const drag = state.drag;
+      if (container !== el.playerBoard || !drag || e.pointerId !== drag.pointerId) return;
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = target && target.closest('.cell');
+      if (!cell || !container.contains(cell)) {
+        if (drag.moved) {
+          drag.anchor = null;
+          state.hover = null;
+          render();
+        }
+        return;
+      }
+      const row = Number(cell.dataset.r);
+      const col = Number(cell.dataset.c);
+      if (!drag.moved && row === drag.startCell[0] && col === drag.startCell[1]) return;
+      if (!drag.moved) {
+        drag.moved = true;
+        try {
+          container.setPointerCapture(drag.pointerId);
+        } catch (e) {}
+        state.player.remove(drag.id);
+        state.selectedId = drag.id;
+        state.horizontal = drag.horizontal;
+      }
+      drag.anchor = drag.horizontal
+        ? [row, col - drag.offset]
+        : [row - drag.offset, col];
+      state.hover = drag.anchor;
+      render();
+    });
+    const finishDrag = (e, cancelled) => {
+      const drag = state.drag;
+      if (container !== el.playerBoard || !drag || e.pointerId !== drag.pointerId) return;
+      state.drag = null;
+      if (!drag.moved) return;
+      const spec = SHIPS.find((ship) => ship.id === drag.id);
+      const placed = !cancelled && drag.anchor && spec
+        && state.player.place(spec, drag.anchor[0], drag.anchor[1], drag.horizontal);
+      if (!placed && spec) state.player.place(spec, drag.origin[0], drag.origin[1], drag.horizontal);
+      state.selectedId = nextUnplaced();
+      state.hover = null;
+      state.suppressClick = true;
+      setTimeout(() => { state.suppressClick = false; }, 0);
+      setupStatus();
+      render();
+    };
+    container.addEventListener('pointerup', (e) => finishDrag(e, false));
+    container.addEventListener('pointercancel', (e) => finishDrag(e, true));
+    container.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse') setHover(container, null);
+    });
     return cells;
   }
 
@@ -95,7 +169,7 @@
   }
 
   function setHover(container, r, c) {
-    if (container !== el.playerBoard || state.phase !== 'setup') return;
+    if (container !== el.playerBoard || state.phase !== 'setup' || state.drag) return;
     state.hover = r === null ? null : [r, c];
     render();
   }
@@ -159,9 +233,9 @@
   function setupStatus() {
     const spec = selectedSpec();
     if (spec) {
-      setStatus(`Place your ${spec.name} (${spec.length} spaces). Click a placed ship to move it.`);
+      setStatus(`Place your ${spec.name} (${spec.length} spaces). Drag a placed ship to move it, or tap it to pick it up.`);
     } else {
-      setStatus('Fleet ready! Click a ship to move it, or press Start Battle.');
+      setStatus('Fleet ready! Drag a ship to move it, or press Start Battle.');
     }
   }
 
@@ -483,6 +557,14 @@
     sound.unlock();
     renderMute();
   });
+  document.addEventListener('pointerdown', () => sound.unlock(), { passive: true });
+  document.addEventListener('touchend', () => sound.unlock(), { passive: true });
+  document.addEventListener('click', (e) => {
+    if (!state.suppressClick) return;
+    state.suppressClick = false;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
   el.rotateBtn.addEventListener('click', rotate);
   el.randomBtn.addEventListener('click', randomize);
   el.clearBtn.addEventListener('click', clearBoard);
